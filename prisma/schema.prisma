@@ -1,15 +1,154 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum CarStatus {
+  available
+  reserved
+  sold
+  not_available
+}
+
+enum EngineType {
+  petrol
+  diesel
+  electric
+  hybrid
+}
+
+enum TransmissionType {
+  manual
+  automatic
+  robot
+}
+
+enum BodyType {
+  sedan
+  suv
+  hatchback
+  coupe
+  wagon
+  pickup
+  minivan
+  convertible
+  other
+}
+
+enum UserRole {
+  customer
+  sales
+  admin
+}
+
+enum UserStatus {
+  active
+  blocked
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum OrderStatus {
+  new
+  confirmed
+  processing
+  completed
+  cancelled
+}
+
+enum DeliveryMethod {
+  pickup
+  delivery
+}
+
+enum ReportType {
+  orders_by_period
+  sales_by_model
+  inventory
+}
+
+model Car {
+  car_id            String        @id @default(cuid())
+  make              String
+  model             String
+  year              Int
+  price             Decimal       @db.Decimal(10,2)
+  status            CarStatus     @default(available)
+  mileage           Int
+  engine_type       EngineType
+  engine_capacity   Float
+  engine_power      Int
+  transmission      TransmissionType
+  body_type         BodyType
+  color             String
+  vin               String?       @unique
+  features          String[]
+  images            String[]
+  description       String?
+  created_timestamp DateTime      @default(now())
+  updated_timestamp DateTime      @updatedAt
+
+  orders            Order[]
+}
+
+model User {
+  user_id             String       @id @default(cuid())
+  role                UserRole     @default(customer)
+  full_name           String
+  email               String       @unique
+  phone               String?
+  address             String?
+  password_hash       String
+  last_login_timestamp DateTime?
+  created_timestamp   DateTime     @default(now())
+  status              UserStatus   @default(active)
+
+  orders              Order[]
+  events              EventLog[]
+}
+
+model Order {
+  order_id           String         @id @default(cuid())
+  user               User           @relation(fields: [user_id], references: [user_id])
+  user_id            String
+  car                Car            @relation(fields: [car_id], references: [car_id])
+  car_id             String
+  order_items        Json
+  total_amount       Decimal        @db.Decimal(10,2)
+  payment_status     PaymentStatus  @default(pending)
+  delivery_method    DeliveryMethod
+  contact_info       String?
+  status             OrderStatus    @default(new)
+  history            Json
+  created_timestamp  DateTime       @default(now())
+  updated_timestamp  DateTime       @updatedAt
+}
+
+model EventLog {
+  event_id      String    @id @default(cuid())
+  user          User?     @relation(fields: [user_id], references: [user_id])
+  user_id       String?
+  event_type    String
+  entity_type   String
+  entity_id     String
+  details       Json
+  timestamp     DateTime   @default(now())
+  ip_address    String?
+}
+
+model Report {
+  report_id           String     @id @default(cuid())
+  type                ReportType
+  parameters          Json
+  generated_timestamp DateTime   @default(now())
+  file_ref            String
 }
